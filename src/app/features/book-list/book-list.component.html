@@ -1,0 +1,81 @@
+<div class="library-app">
+  <header class="hero-header">
+    <div class="hero-content">
+      <h1 class="hero-title">📚 Digital Library</h1>
+      <div class="hero-actions">
+        <a [routerLink]="['/books', 'add']" class="btn btn-accent">
+          ➕ Add A New Book
+        </a>
+      </div>
+    </div>
+    <div class="hero-decoration"></div>
+  </header>
+
+  <section class="search-container">
+    <div class="search-card">
+      <div class="search-input-wrapper">
+        <input type="text" class="search-input" placeholder="🔍 Search books, authors..."
+          [(ngModel)]="searchQuery" (input)="onSearchInput()" (keyup.enter)="performSearch()">
+        <div class="search-buttons">
+          <button type="button" class="btn btn-primary" (click)="performSearch()" [disabled]="loading()">
+            Find Books
+          </button>
+          <button type="button" class="btn btn-secondary" (click)="clearSearch()">
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  @if (loading()) {
+  <div class="state-container">
+    <div class="loading-card">
+      <div class="spinner"></div>
+      <h3>Finding books...</h3>
+      <p>Please wait while we search our collection</p>
+    </div>
+  </div>
+  }
+
+  @if (!loading() && books().length > 0) {
+  <section class="books-container">
+    <div class="books-header">
+      <h2 class="books-count">{{ books().length }} Books Found</h2>
+      <div class="books-divider"></div>
+    </div>
+
+    <div class="books-grid">
+      @for (book of books(); track book.id) {
+      <article class="book-card clickable" [routerLink]="['/books', book.id]">
+        <div class="book-image-container">
+          <img [src]="book.thumbnail" [alt]="book.title" (error)="onImageError($event)" loading="lazy"
+            class="book-cover">
+        </div>
+
+        <div class="book-content">
+          <h3 class="book-title">{{ book.title }}</h3>
+          <p class="book-author">{{ getAuthorsDisplay(book.authors) }}</p>
+          @if (book.publishedYear) {
+          <p class="book-year">{{ book.publishedYear }}</p>
+          }
+        </div>
+      </article>
+      }
+    </div>
+  </section>
+  }
+
+  @if (!loading() && books().length === 0) {
+  <div class="state-container">
+    <div class="empty-card">
+      <div class="empty-icon">📚</div>
+      <h3>No books found</h3>
+      <p>Try searching with different keywords or browse our collection</p>
+      <button type="button" class="btn btn-primary" (click)="clearSearch()">
+        Browse Collection
+      </button>
+    </div>
+  </div>
+  }
+</div>

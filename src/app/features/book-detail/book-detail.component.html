@@ -1,0 +1,389 @@
+<div class="book-detail-container">
+  <nav class="detail-nav">
+    <button 
+      type="button" 
+      class="btn btn-secondary"
+      (click)="goBack()"
+    >
+      ← Back to Library
+    </button>
+  </nav>
+
+  @if (errorMessage()) {
+    <div class="state-container">
+      <div class="error-card">
+        <div class="error-icon">⚠️</div>
+        <h3>{{ errorMessage() }}</h3>
+        @if (!currentBook()) {
+          <button 
+            type="button" 
+            class="btn btn-primary"
+            (click)="goBack()"
+          >
+            Back to Library
+          </button>
+        } @else {
+          <button 
+            type="button" 
+            class="btn btn-primary"
+            (click)="errorMessage.set(null)"
+          >
+            Dismiss
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  @if ((currentBook() || isAddingNewBook()) && !errorMessage()) {
+    <div class="book-detail-content">
+      <div class="book-detail-card">
+        
+        <div class="book-image-section">
+          <div class="book-image-wrapper">
+            @if (currentBook() && !isEditingMode()) {
+              <img 
+                [src]="currentBook()!.thumbnail" 
+                [alt]="currentBook()!.title"
+                (error)="onImageError($event)"
+                class="book-detail-image"
+              >
+            } @else if (isEditingMode() && editForm.get('thumbnail')?.value) {
+              <img 
+                [src]="editForm.get('thumbnail')?.value" 
+                [alt]="editForm.get('title')?.value || 'Book preview'"
+                (error)="onImageError($event)"
+                class="book-detail-image"
+              >
+            } @else {
+              <div class="no-image-placeholder">
+                <span>📖</span>
+                <p>No image</p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="book-info-section">
+          @if (!isEditingMode() && currentBook()) {
+            <div class="book-header">
+              <h1 class="book-detail-title">{{ currentBook()!.title }}</h1>
+              <div class="book-actions-header">
+                <button 
+                  type="button" 
+                  class="btn btn-primary"
+                  (click)="enterEditMode()"
+                >
+                  ✏️ Edit
+                </button>
+                <button 
+                  type="button" 
+                  class="btn btn-danger"
+                  (click)="requestBookDeletion()"
+                >
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+
+            <div class="book-details-grid">
+              <div class="detail-item">
+                <span class="detail-label">Authors</span>
+                <span class="detail-value">{{ getAuthorsDisplay(currentBook()!.authors) }}</span>
+              </div>
+
+              @if (currentBook()!.publishedYear) {
+                <div class="detail-item">
+                  <span class="detail-label">Published Year</span>
+                  <span class="detail-value">{{ currentBook()!.publishedYear }}</span>
+                </div>
+              }
+
+              @if (currentBook()!.publisher) {
+                <div class="detail-item">
+                  <span class="detail-label">Publisher</span>
+                  <span class="detail-value">{{ currentBook()!.publisher }}</span>
+                </div>
+              }
+
+              @if (currentBook()!.isbn) {
+                <div class="detail-item">
+                  <span class="detail-label">ISBN</span>
+                  <span class="detail-value">{{ currentBook()!.isbn }}</span>
+                </div>
+              }
+
+              @if (currentBook()!.pageCount) {
+                <div class="detail-item">
+                  <span class="detail-label">Pages</span>
+                  <span class="detail-value">{{ currentBook()!.pageCount }}</span>
+                </div>
+              }
+            </div>
+
+            @if (currentBook()!.description) {
+              <div class="book-description-section">
+                <h3 class="description-title">Description</h3>
+                <p class="book-description">{{ currentBook()!.description }}</p>
+              </div>
+            }
+          }
+
+          @if (isEditingMode()) {
+            <div class="book-header">
+              <h1 class="book-detail-title">
+                @if (isAddingNewBook()) {
+                  Add New Book
+                } @else {
+                  Edit Book
+                }
+              </h1>
+              <div class="book-actions-header">
+                <button 
+                  type="button" 
+                  class="btn btn-accent"
+                  (click)="saveBookData()"
+                  [disabled]="isSaving() || !isFormValid()"
+                >
+                  @if (isSaving()) {
+                    <span class="btn-spinner"></span>
+                  }
+                  @if (isAddingNewBook()) {
+                    💾 Add Book
+                  } @else {
+                    💾 Save
+                  }
+                </button>
+                <button 
+                  type="button" 
+                  class="btn btn-secondary"
+                  (click)="cancelEditing()"
+                  [disabled]="isSaving()"
+                >
+                  ❌ Cancel
+                </button>
+              </div>
+            </div>
+
+            @if (isAddingNewBook()) {
+              <div class="google-search-section">
+                <div class="search-toggle">
+                  <button 
+                    type="button" 
+                    class="btn btn-outline"
+                    (click)="toggleGoogleBooksSearch()"
+                  >
+                    @if (isGoogleSearchVisible()) {
+                      📚 Hide Book Search
+                    } @else {
+                      🔍 Search Google Books
+                    }
+                  </button>
+                </div>
+
+                @if (isGoogleSearchVisible()) {
+                  <div class="google-search-container">
+                    <div class="search-input-group">
+                      <input 
+                        type="text" 
+                        class="form-input"
+                        placeholder="Search for books..."
+                        [value]="googleBooksQuery"
+                        (input)="handleSearchQueryInput($event)"
+                        (keyup.enter)="executeGoogleBooksSearch()"
+                      >
+                      <button 
+                        type="button" 
+                        class="btn btn-primary"
+                        (click)="executeGoogleBooksSearch()"
+                        [disabled]="isGoogleSearchLoading() || !googleBooksQuery.trim()"
+                      >
+                        @if (isGoogleSearchLoading()) {
+                          <span class="btn-spinner"></span>
+                        }
+                        Search
+                      </button>
+                    </div>
+
+                    @if (googleBooksResults().length > 0) {
+                      <div class="search-results">
+                        <h4>Search Results</h4>
+                        <div class="search-results-grid">
+                          @for (result of googleBooksResults(); track result.id) {
+                            <div class="search-result-card" (click)="selectBookFromGoogleResults(result)">
+                              <img 
+                                [src]="result.thumbnail" 
+                                [alt]="result.title"
+                                (error)="onImageError($event)"
+                                class="search-result-image"
+                              >
+                              <div class="search-result-info">
+                                <h5>{{ result.title }}</h5>
+                                <p>{{ getAuthorsDisplay(result.authors) }}</p>
+                                @if (result.publishedYear) {
+                                  <span class="result-year">{{ result.publishedYear }}</span>
+                                }
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            <form [formGroup]="editForm" class="edit-form">
+              <div class="form-group">
+                <label class="form-label" for="title">
+                  Title <span class="required">*</span>
+                </label>
+                <input 
+                  type="text" 
+                  id="title"
+                  formControlName="title"
+                  class="form-input"
+                  [class.error]="editForm.get('title')?.invalid && editForm.get('title')?.touched"
+                  placeholder="Enter book title"
+                >
+                @if (editForm.get('title')?.invalid && editForm.get('title')?.touched) {
+                  <span class="error-text">Title is required</span>
+                }
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="authors">
+                  Authors <span class="required">*</span>
+                </label>
+                <input 
+                  type="text" 
+                  id="authors"
+                  formControlName="authors"
+                  class="form-input"
+                  [class.error]="editForm.get('authors')?.invalid && editForm.get('authors')?.touched"
+                  placeholder="Enter authors (comma separated)"
+                >
+                <span class="form-help">Separate multiple authors with commas</span>
+                @if (editForm.get('authors')?.invalid && editForm.get('authors')?.touched) {
+                  <span class="error-text">At least one author is required</span>
+                }
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="publishedYear">Published Year</label>
+                  <input 
+                    type="text" 
+                    id="publishedYear"
+                    formControlName="publishedYear"
+                    class="form-input"
+                    placeholder="e.g., 2023"
+                  >
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="pageCount">Page Count</label>
+                  <input 
+                    type="number" 
+                    id="pageCount"
+                    formControlName="pageCount"
+                    class="form-input"
+                    [class.error]="editForm.get('pageCount')?.invalid && editForm.get('pageCount')?.touched"
+                    placeholder="e.g., 300"
+                    min="1"
+                  >
+                  @if (editForm.get('pageCount')?.invalid && editForm.get('pageCount')?.touched) {
+                    <span class="error-text">Page count must be greater than 0</span>
+                  }
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="publisher">Publisher</label>
+                  <input 
+                    type="text" 
+                    id="publisher"
+                    formControlName="publisher"
+                    class="form-input"
+                    placeholder="e.g., Penguin Books"
+                  >
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="isbn">ISBN</label>
+                  <input 
+                    type="text" 
+                    id="isbn"
+                    formControlName="isbn"
+                    class="form-input"
+                    placeholder="e.g., 978-0123456789"
+                  >
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="thumbnail">Cover Image URL</label>
+                <input 
+                  type="url" 
+                  id="thumbnail"
+                  formControlName="thumbnail"
+                  class="form-input"
+                  placeholder="https://example.com/book-cover.jpg"
+                >
+                <span class="form-help">URL to book cover image</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="description">Description</label>
+                <textarea 
+                  id="description"
+                  formControlName="description"
+                  class="form-textarea"
+                  rows="6"
+                  placeholder="Enter book description..."
+                ></textarea>
+              </div>
+            </form>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (isDeleteModalVisible()) {
+    <div class="modal-overlay" (click)="cancelBookDeletion()">
+      <div class="modal-container" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-icon danger">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+          </div>
+          <h2>Delete Book</h2>
+        </div>
+        
+        <div class="modal-body">
+          <p>Are you sure you want to delete <strong>"{{ currentBook()?.title }}"</strong>?</p>
+          <p class="modal-warning">This action cannot be undone.</p>
+        </div>
+        
+        <div class="modal-actions">
+          <button 
+            type="button" 
+            class="btn btn-secondary"
+            (click)="cancelBookDeletion()"
+          >
+            Cancel
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-danger-solid"
+            (click)="confirmBookDeletion()"
+          >
+            🗑️ Delete Book
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
