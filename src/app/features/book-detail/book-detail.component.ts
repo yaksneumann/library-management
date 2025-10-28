@@ -1,11 +1,12 @@
-import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnInit, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { BooksService } from '../../services/books.service';
 import { Book } from '../../models/book.interface';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-book-detail',
@@ -14,12 +15,12 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
   templateUrl: './book-detail.component.html',
   styleUrl: './book-detail.component.css'
 })
-export class BookDetailComponent implements OnInit, OnDestroy {
+export class BookDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly booksService = inject(BooksService);
   private readonly fb = inject(FormBuilder);
-  private readonly destroy$ = new Subject<void>();
+  private readonly destroyRef = inject(DestroyRef);
   private readonly googleBooksSearchSubject = new Subject<string>();
 
   protected readonly currentBook = signal<Book | null>(null);
@@ -49,7 +50,7 @@ export class BookDetailComponent implements OnInit, OnDestroy {
     const bookId = this.route.snapshot.paramMap.get('id');
     
     this.editForm.statusChanges.pipe(
-      takeUntil(this.destroy$)
+      takeUntilDestroyed(this.destroyRef)
     ).subscribe(() => {
       this.isFormValid.set(this.editForm.valid);
     });
@@ -57,7 +58,7 @@ export class BookDetailComponent implements OnInit, OnDestroy {
     this.googleBooksSearchSubject.pipe(
       debounceTime(300),
       distinctUntilChanged(),
-      takeUntil(this.destroy$)
+      takeUntilDestroyed(this.destroyRef)
     ).subscribe((query: string) => {
       this.searchGoogleBooksApi(query);
     });
@@ -76,10 +77,6 @@ export class BookDetailComponent implements OnInit, OnDestroy {
     }
 
     this.loadBookData(bookId);
-  }
-
-  ngOnDestroy() {
-    this.destroy$.next();
   }
 
   private loadBookData(id: string): void {

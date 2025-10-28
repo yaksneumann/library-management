@@ -1,10 +1,11 @@
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { BooksService } from '../../services/books.service';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject } from 'rxjs';
 import { throttleTime, distinctUntilChanged } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-book-list',
@@ -13,9 +14,9 @@ import { throttleTime, distinctUntilChanged } from 'rxjs/operators';
   templateUrl: './book-list.component.html',
   styleUrl: './book-list.component.css',
 })
-export class BookListComponent implements OnInit, OnDestroy {
+export class BookListComponent implements OnInit {
   private readonly booksService = inject(BooksService);
-  private readonly destroy$ = new Subject<void>();
+  private readonly destroyRef = inject(DestroyRef);
   private readonly searchSubject = new Subject<string>();
 
   protected searchQuery = '';
@@ -25,15 +26,12 @@ export class BookListComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.searchSubject
-      .pipe(throttleTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
+      .pipe(throttleTime(300), 
+      distinctUntilChanged(), 
+      takeUntilDestroyed(this.destroyRef))
       .subscribe((query) => {
         this.executeSearch(query);
       });
-  }
-
-  ngOnDestroy() {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   protected onSearchInput(): void {

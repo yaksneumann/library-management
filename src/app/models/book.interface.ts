@@ -10,14 +10,6 @@ export interface Book {
   publisher?: string;
 }
 
-export interface BookSearchFilters {
-  title?: string;
-  author?: string;
-  publishedYear?: string;
-  isbn?: string;
-  query?: string;
-}
-
 export interface GoogleBooksResponse {
   totalItems: number;
   items: GoogleBookItem[];
